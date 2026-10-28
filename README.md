@@ -1,7 +1,7 @@
 # Where the Dragons Gone
 
 
-## Install
+## Install WDG
 
 ```
 mkdir build && cd build
