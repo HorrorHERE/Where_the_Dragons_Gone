@@ -1,15 +1,15 @@
-add_library(libsdb libsdb.cpp)
-add_library(sdb::libsdb ALIAS libsdb)
+add_library(libwdg libwdg.cpp)
+add_library(wdg::libwdg ALIAS libwdg)
 
 set_target_properties(
-	libsdb
-	PROPERTIES OUTPUT_NAME sdb
+	libwdg
+	PROPERTIES OUTPUT_NAME wdg
 )
 
-target_compile_features(libsdb PUBLIC cxx_std_17)
+target_compile_features(libwdg PUBLIC cxx_std_17)
 
 target_include_directories(
-	libsdb
+	libwdg
 	PUBLIC
 	    $<INSTALL_INTERFACE:include>
 	    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
@@ -18,8 +18,8 @@ target_include_directories(
 )
 
 include(GNUInstallDirs)
-install(TARGETS libsdb
-	EXPORT sdb-targets
+install(TARGETS libwdg
+	EXPORT wdg-targets
 	LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
@@ -32,9 +32,9 @@ install(
 )
 
 install(
-	EXPORT sdb-targets
-	FILE sdb-config.cmake
-	NAMESPACE sdb::
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdb
+	EXPORT wdg-targets
+	FILE wdg-config.cmake
+	NAMESPACE wdg::
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/wdg
 )
 

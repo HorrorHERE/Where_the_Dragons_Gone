@@ -1,7 +1,7 @@
-add_executable(sdb sdb.cpp)
-target_link_libraries(sdb PRIVATE sdb::libsdb PkgConfig::readline)
+add_executable(wdg wdg.cpp)
+target_link_libraries(wdg PRIVATE wdg::libwdg PkgConfig::readline)
 
 install(
-	TARGETS sdb
+	TARGETS wdg
 	RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
