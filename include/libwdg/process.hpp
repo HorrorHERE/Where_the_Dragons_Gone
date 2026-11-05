@@ -24,6 +24,7 @@ namespace wdg {
 			int wait_on_signal();
 
 			pid_t pid() const { return pid_; }
+			process_state state() const { return state_; }
 
 			~process();
 		private:
@@ -33,6 +34,8 @@ namespace wdg {
 			process(const process&) = delete;
 			process& operator = (const process&) = delete;
 			pid_t pid_ = 0;
+			bool terminate_on_end = true;
+			process_state state_ = process_state::stopped;
 	
 	};
 }
