@@ -12,6 +12,8 @@
 #include <sstream>
 #include <readline/readline.h>
 #include <readline/history.h>
+#include <libwdg/process.hpp>
+#include <libwdg/error.hpp>
 
 namespace {
 
@@ -59,16 +61,35 @@ namespace {
 		}
 	}
 	
-	void handle_command(pid_t pid, std::string_view line)
+	void print_stop_reason(const wdg::process& process, wdg::stop_reason reason)
+	{
+		std::cout << "Process " << process.pid() << ' ';
+		switch (reason.reason)
+		{
+			case wdg::process_state::exited:
+				std::cout << "exited with status " << static_cast<int>(reason.info);
+				break;
+			
+			case wdg::process_state::terminated:
+				std::cout << "terminated with signal " << sigabbrev_np(reason.info);
+				break;
+			case wdg::process_state::stopped:
+				std::cout << "stopped with signal " << sigabbrev_np(reason.info);
+				break;
+		}
+		std::cout << std::endl;
+	}
+
+
+	void handle_command(std::unique_ptr<wdg::process>& process, std::string_view line)
 	{
 		auto args = split(line, ' ');
-		if (args.empty()) return;
 		auto command = args[0];
+
 		if (is_prefix(command, "continue") || is_prefix(command, "c")) {
-			std::cout << "Continuing execution...\n";
-			resume(pid);
-			wait_on_signal(pid);
-			std::cout << "Process stopped.\n";
+			process->resume();
+			auto reason = process->wait_on_signal();
+			print_stop_reason(*process, reason);
 		}
 		else
 		{
@@ -77,97 +98,73 @@ namespace {
 	}
 
 
-
-	pid_t attach(int argc, const char** argv)
+	std::unique_ptr<wdg::process> attach(int argc, const char** argv)
 	{
-		pid_t pid = 0;
 		if (argc == 3 && argv[1] == std::string_view("-p"))
 		{
-			pid = std::atoi(argv[2]);
-			if (pid <= 0)
-			{
-				std::cerr << "Invalid pid\n";
-				return -1;
-			}
-			if (ptrace (PTRACE_ATTACH, pid, /*addr=*/nullptr, /*data=*/nullptr) < 0)
-			{
-				std::perror("Could not attach");
-				return -1;
-			}
+			pid_t pid = std::atoi(argv[2]);
+			return wdg::process::attach(pid);
 		}
+
 		else
 		{
 			const char* program_path = argv[1];
-			if ((pid = fork()) < 0)
-			{
-				std::perror("fork failed");
-				return -1;
-			}
+			return wdg::process::launch(program_path);
+		}
+	}
 
-			if (pid == 0)
+
+	void main_loop(std::unique_ptr<wdg::process>& process)
+	{
+		char* line = nullptr;
+		while ((line = readline("wdg> ")) != nullptr)
+		{
+			std::string line_str;
+			if (line == std::string_view(""))
 			{
-				if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) < 0)
+				free(line);
+				if (history_length > 0)
 				{
-					std::perror("Tracing Failed");
-					return -1;
+					line_str = history_list()[history_length - 1]->line;
 				}
-
-				if (execlp(program_path, program_path, nullptr) < 0)
+			}
+			else
+			{
+				line_str = line;
+				add_history(line);
+				free(line);
+			}
+			if (!line_str.empty())
+			{
+				try
 				{
-					std::perror("Exec failed");
-					return -1;
+					handle_command(process, line_str);
+				}
+				catch (const wdg::error& err)
+				{
+					std::cout << err.what() << '\n';
 				}
 			}
 		}
-		return pid;
-		
 	}
+
 }
 
 
 int main(int argc, const char** argv) {
-	wdg::say_hello();
 	if (argc == 1) {
 		std::cerr << "No arg given\n\nNo dragons here\n";
 		return -1;
 	}
 
-	pid_t pid = attach(argc, argv);
-
-	int wait_status;
-	int options = 0;
-
-	if (waitpid(pid, &wait_status, options) < 0)
+	try
 	{
-		std::perror("waitpid failed");
-		return -1;
+		auto process = attach(argc, argv);
+		main_loop(process);
 	}
-
-	char* line = nullptr;
-	while ((line = readline("wdg> ")) != nullptr)
+	catch (const wdg::error& err)
 	{
-		std::string line_str;
-		if (line == std::string_view(""))
-		{
-			free(line);
-			if (history_length > 0)
-			{
-				line_str = history_list()[history_length - 1]->line;
-			}
-		}
-		else
-		{
-			line_str = line;
-			add_history(line);
-			free(line);
-		}
-
-		if (!line_str.empty())
-		{
-			handle_command(pid, line_str);
-		}
-
-	}
-
+		std::cout << err.what() << "\n";
+	}	
 	return 0;
 }
