@@ -1,4 +1,4 @@
-add_library(libwdg libwdg.cpp)
+add_library(libwdg process.cpp)
 add_library(wdg::libwdg ALIAS libwdg)
 
 set_target_properties(
